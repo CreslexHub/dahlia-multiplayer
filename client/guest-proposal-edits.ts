@@ -1,9 +1,9 @@
 import { GuestRefusal, readGuestName, readGuestText, readOrRefusal } from "./guest-cards";
-import type { GuestPermissionId } from "./permissions";
+import { GUEST_PERMISSION_ROWS, type GuestPermissionId } from "./permissions";
 import { app } from "@dahlia/plugin-api";
 import type { ProposalAction, ProposalBundle } from "@dahlia/plugin-api";
 
-const { EDITABLE_FIELDS, STATE_SET_MODES } = app.proposals;
+const { STATE_SET_MODES, editableFieldsOf, fieldOf, withField, guestRightOf } = app.proposals;
 
 /**
  * **What a guest's edit to a proposal may change, read on the host.**
@@ -18,8 +18,8 @@ const { EDITABLE_FIELDS, STATE_SET_MODES } = app.proposals;
  *
  * So a guest's edit is read as the boxes would have written it, over the Director's original:
  *
- *  - a state event keeps its kind, and only the fields `EDITABLE_FIELDS` names are taken — never
- *    one it marks `instructs`;
+ *  - a state event keeps its kind, and only the fields its kind's edit boxes name are taken
+ *    (`editableFieldsOf`: the app's table, or a plugin's kind's own) — never one marked `instructs`;
  *  - a `state_update` keeps the card it is about, and may change which of that card's facts it
  *    sets, how, and to what (the field editor's three controls);
  *  - a note keeps who it is to, how long it lasts and who may read it, and may change its words;
@@ -40,7 +40,10 @@ function asRecord(raw: unknown, what: string): Payload {
 
 function readStateEvent(original: Payload, replacement: Payload): Payload {
   const kind = original.type;
-  if (replacement.type !== kind) throw new GuestRefusal("An edit cannot turn a proposal into a different kind of change.");
+  // A plugin's change is one type for every plugin's kinds, with the kind beside it: both must hold.
+  if (replacement.type !== kind || replacement.kind !== original.kind) {
+    throw new GuestRefusal("An edit cannot turn a proposal into a different kind of change.");
+  }
 
   if (kind === "state_update") {
     const action = replacement.action;
@@ -55,14 +58,15 @@ function readStateEvent(original: Payload, replacement: Payload): Payload {
     };
   }
 
-  const fields = typeof kind === "string" ? EDITABLE_FIELDS[kind] : undefined;
+  const fields = editableFieldsOf(original);
   if (!fields) throw new GuestRefusal("That kind of proposal is not edited at this table; approve or decline it as it stands.");
   if (fields.instructs) throw new GuestRefusal("What a subagent is told to do stays the host's to write.");
-  return {
-    ...original,
-    ...(fields.identityKey ? { [fields.identityKey]: readGuestName(fields.identityKey, replacement[fields.identityKey]) } : {}),
-    [fields.proseKey]: readGuestText(fields.proseKey, replacement[fields.proseKey]),
-  };
+  // Read and written where the kind keeps them (`fieldOf`, `withField`): on the change itself, or in
+  // a plugin's call's arguments — so a guest's edit lands where the host's own boxes would write it.
+  const named = fields.identityKey
+    ? withField(original, fields.identityKey, readGuestName(fields.identityKey, fieldOf(replacement, fields.identityKey)))
+    : original;
+  return withField(named, fields.proseKey, readGuestText(fields.proseKey, fieldOf(replacement, fields.proseKey)));
 }
 
 /**
@@ -84,8 +88,17 @@ const CARD_EVENTS: ReadonlySet<string> = new Set(["state_update", "character_add
 export function editRight(action: Pick<ProposalAction, "type" | "payload">): GuestPermissionId | "host" | null {
   if (action.type === "speaker_call") return null;
   if (action.type === "injection") return "writeNotes";
+  // A plugin's kind says which of this table's rights governs it; one it does not declare, one this
+  // table does not have, or a kind whose plugin the host does not have, is the host's.
+  const declared = action.type === "state_event" ? guestRightOf(action.payload) : null;
+  if (declared !== null) return isGuestRight(declared) ? declared : "host";
   const kind = (action.payload as { type?: unknown } | undefined)?.type;
   return action.type === "state_event" && typeof kind === "string" && CARD_EVENTS.has(kind) ? "editLibrary" : "host";
+}
+
+/** Whether a right a plugin's kind named is one this table has. */
+function isGuestRight(id: string): id is GuestPermissionId {
+  return GUEST_PERMISSION_ROWS.some((row) => row.id === id);
 }
 
 const NOT_YOURS: Partial<Record<GuestPermissionId | "host", string>> = {
