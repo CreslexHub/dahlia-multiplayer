@@ -1,0 +1,24 @@
+{
+  "name": "dahlia-multiplayer",
+  "version": "2.0.0",
+  "private": true,
+  "description": "The Multiplayer plugin for Dahlia: play one story together.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "dahlia-plugin build",
+    "release": "dahlia-plugin build --minify",
+    "typecheck": "tsc --noEmit",
+    "vendor-api": "npm pack ../../packages/plugin-api --pack-destination vendor"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@dahlia/plugin-api": "file:vendor/dahlia-plugin-api-0.1.0.tgz",
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.6",
+    "typescript": "^5.8.3"
+  }
+}

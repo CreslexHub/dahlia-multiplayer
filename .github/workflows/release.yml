@@ -1,0 +1,29 @@
+# Builds plugin.zip and attaches it to the release a tag makes — what Dahlia's
+# "Install from GitHub" fetches (the latest release's plugin.zip, or a tag's).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      # The tag is the plugin's version: a release whose plugin.json says another is refused here.
+      - name: The tag matches plugin.json
+        run: test "v$(node -p "require('./plugin.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm run release
+      - name: Attach plugin.zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/plugin.zip --title "Multiplayer $GITHUB_REF_NAME" --notes "Install from Dahlia: Profile → Plugins → Install from GitHub → CreslexHub/dahlia-multiplayer." --verify-tag

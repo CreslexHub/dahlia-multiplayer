@@ -1,0 +1,63 @@
+{
+  "id": "multiplayer-tunnel",
+  "name": "Multiplayer",
+  "version": "2.0.0",
+  "minAppVersion": "0.1.0",
+  "author": "Dahlia AI",
+  "description": "Host your stories with friends. On your own network they join with a room code while Network → Open to your network is on; from anywhere, through Cloudflare's free quick tunnel, which this downloads the first time you open it. Off, this computer hosts no table — joining somebody else's never needs it.",
+  "reach": "table",
+  "permissions": [
+    {
+      "kind": "download",
+      "sentence": "The first time you open the tunnel, downloads cloudflared, Cloudflare's tunnel program, from one pinned release on GitHub into this plugin's folder, and keeps it only if it is exactly the file pinned below. Installing downloads nothing."
+    },
+    { "kind": "run-program", "sentence": "Runs cloudflared on this computer while the tunnel is open, and stops it when the tunnel closes." },
+    {
+      "kind": "public-address",
+      "sentence": "Opens a public https address to this app. A guest who uses it gets a seat at your table and no access to your library, keys or settings."
+    },
+    { "kind": "network", "sentence": "Talks to GitHub to download cloudflared, and to cloudflared's own status page on this computer to learn the tunnel's address." }
+  ],
+  "downloads": [
+    {
+      "file": "cloudflared 2026.10.7 (the file for this computer's system)",
+      "url": "https://github.com/cloudflare/cloudflared/releases/tag/2026.10.7",
+      "page": "https://github.com/cloudflare/cloudflared/releases"
+    }
+  ],
+  "downloadsWhen": "the first time you open the tunnel",
+  "settings": [
+    {
+      "key": "openOnStart",
+      "kind": "toggle",
+      "label": "Open the tunnel when Dahlia AI starts",
+      "hint": "Off: open it from Multiplayer when you host, so the public address exists only while you're inviting someone.",
+      "default": false
+    },
+    {
+      "key": "publicAddress",
+      "kind": "text",
+      "label": "Permanent public address",
+      "hint": "Your own domain that reaches this computer, if you have one. Guests are invited there and no tunnel is opened. Leave it empty to use the tunnel.",
+      "default": "",
+      "placeholder": "https://stories.example.com",
+      "maxLength": 200
+    }
+  ],
+  "actions": [
+    { "id": "open", "label": "Open the tunnel", "when": "stopped" },
+    { "id": "close", "label": "Close the tunnel", "when": "running" }
+  ],
+  "client": "client.js",
+  "server": "server.js",
+  "mounts": [{ "path": "room", "public": true }, { "path": "tunnel" }, { "path": "public-url" }],
+  "pages": [{ "path": "join", "public": true, "landing": true }],
+  "programs": [
+    { "file": "data/cloudflared.exe", "platform": "win32-x64", "sha256": "2493dbc168923bb3e59e5e7716f71deced92992eea9acd6e9d74f84ac7751343" },
+    { "file": "data/cloudflared.exe", "platform": "win32-arm64", "sha256": "2493dbc168923bb3e59e5e7716f71deced92992eea9acd6e9d74f84ac7751343" },
+    { "file": "data/cloudflared", "platform": "linux-x64", "sha256": "1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872" },
+    { "file": "data/cloudflared", "platform": "linux-arm64", "sha256": "3df43aedc9ff291d1735b5cb576cb97e0b157488796db2e32b28aecabb445775" },
+    { "file": "data/cloudflared", "platform": "darwin-x64", "sha256": "5c55e77da7012cebca19170357e196176c48c9647cc2ead404702fa125ddbd86" },
+    { "file": "data/cloudflared", "platform": "darwin-arm64", "sha256": "2136431d5eb467bf447d2ee514b713e192719b143aec1d9e09bf7dc290d5bb12" }
+  ]
+}
